@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoTrack — Seguimiento de Vehículos</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold: #C9A96E; --gold-light: #E8D5B0; --gold-dark: #8B6E3F;
+  --dark: #0F0F0F; --dark-2: #1A1A1A; --dark-3: #252525; --dark-4: #303030;
+  --text: #F0EDE8; --text-muted: #9A9590; --text-dim: #6A6560;
+  --green: #4A8C6F; --green-bg: #1A2E24;
+  --amber-bg: #2A2115; --blue: #4A7A9B; --blue-bg: #152030;
+  --red: #9B4A4A; --red-bg: #2A1515;
+  --radius: 4px; --radius-lg: 8px;
+}
+body { font-family: 'Jost', sans-serif; background: var(--dark); color: var(--text); min-height: 100vh; font-weight: 300; }
+
+/* ── LAYOUT ── */
+.app { max-width: 920px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* ── HEADER ── */
+.header { padding: 36px 0 28px; border-bottom: 1px solid #222; margin-bottom: 36px; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand-icon { width: 42px; height: 42px; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; border-radius: var(--radius); }
+.brand-icon svg { width: 20px; height: 20px; stroke: var(--gold); fill: none; stroke-width: 1.5; }
+.brand-text h1 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 500; letter-spacing: 0.02em; }
+.brand-text p { font-size: 10px; color: var(--text-dim); letter-spacing: 0.16em; text-transform: uppercase; margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.btn-admin-link { padding: 8px 16px; font-family: 'Jost', sans-serif; font-size: 11px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; background: transparent; border: 1px solid #2A2A2A; color: var(--text-dim); border-radius: var(--radius); cursor: pointer; transition: all 0.2s; }
+.btn-admin-link:hover { border-color: var(--gold); color: var(--gold); }
+.btn-logout { padding: 8px 16px; font-family: 'Jost', sans-serif; font-size: 11px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; background: transparent; border: 1px solid var(--red-bg); color: var(--red); border-radius: var(--radius); cursor: pointer; transition: all 0.2s; display: none; }
+.btn-logout:hover { background: var(--red-bg); }
+
+/* ── SECTION LABEL ── */
+.section-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.section-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, #2A2A2A, transparent); }
+
+/* ── PANELS ── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── LOGIN OVERLAY ── */
+.login-wrap { max-width: 360px; margin: 60px auto; }
+.login-card { background: var(--dark-2); border: 1px solid #252525; border-radius: var(--radius-lg); padding: 36px 32px; }
+.login-card h2 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; margin-bottom: 6px; }
+.login-card p { font-size: 12px; color: var(--text-dim); margin-bottom: 28px; letter-spacing: 0.04em; }
+.login-err { font-size: 12px; color: var(--red); margin-top: 12px; min-height: 18px; letter-spacing: 0.04em; }
+
+/* ── FORMS ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.form-group { display: flex; flex-direction: column; gap: 7px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); }
+.form-input, .form-select {
+  background: var(--dark-3); border: 1px solid #2A2A2A; color: var(--text);
+  padding: 11px 13px; font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 300;
+  border-radius: var(--radius); outline: none; transition: border-color 0.2s; -webkit-appearance: none; width: 100%;
+}
+.form-input:focus, .form-select:focus { border-color: var(--gold); }
+.form-input::placeholder { color: var(--text-dim); }
+.form-select option { background: var(--dark-2); }
+.sel-wrap { position: relative; }
+.sel-wrap::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 12px; pointer-events: none; }
+.sel-wrap .form-select { padding-right: 30px; }
+
+.btn-primary { width: 100%; padding: 13px; background: transparent; border: 1px solid var(--gold); color: var(--gold); font-family: 'Jost', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; }
+.btn-primary:hover { background: rgba(201,169,110,0.1); }
+.btn-gold { width: 100%; padding: 13px; background: var(--gold-dark); border: none; color: var(--gold-light); font-family: 'Jost', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; }
+.btn-gold:hover { background: var(--gold); color: var(--dark); }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { text-align: left; padding: 10px 12px; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); border-bottom: 1px solid #222; font-weight: 400; }
+tbody tr { border-bottom: 1px solid #1C1C1C; transition: background 0.15s; }
+tbody tr:hover { background: var(--dark-2); }
+tbody td { padding: 12px 12px; color: var(--text-muted); font-weight: 300; vertical-align: middle; }
+tbody td:first-child { color: var(--text); font-weight: 400; font-size: 14px; }
+
+/* ── BADGES ── */
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 2px; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.b-ingresado    { background: var(--blue-bg);  color: var(--blue); }  .b-ingresado .badge-dot    { background: var(--blue); }
+.b-diagnostico  { background: var(--amber-bg); color: var(--gold); }  .b-diagnostico .badge-dot  { background: var(--gold); }
+.b-enreparacion { background: var(--amber-bg); color: var(--gold); }  .b-enreparacion .badge-dot { background: var(--gold); }
+.b-listo        { background: var(--green-bg); color: #6BBF98; }       .b-listo .badge-dot        { background: #6BBF98; }
+.b-entregado    { background: #1A1A1A;         color: var(--text-dim);} .b-entregado .badge-dot    { background: var(--text-dim); }
+
+/* ── ACTION BUTTONS ── */
+.btn-del { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 17px; padding: 2px 5px; border-radius: var(--radius); transition: color 0.2s; font-family: 'Jost', sans-serif; line-height: 1; }
+.btn-del:hover { color: var(--red); }
+.btn-edit-state { background: none; border: 1px solid #2A2A2A; cursor: pointer; color: var(--text-dim); font-size: 10px; padding: 4px 10px; border-radius: var(--radius); transition: all 0.2s; font-family: 'Jost', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.btn-edit-state:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ── INLINE STATE EDITOR ── */
+.inline-edit { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.inline-edit .form-select { padding: 6px 28px 6px 10px; font-size: 12px; flex: 1; min-width: 140px; }
+.btn-save-state { padding: 6px 14px; background: var(--gold-dark); border: none; color: var(--gold-light); font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.btn-save-state:hover { background: var(--gold); color: var(--dark); }
+.btn-cancel-state { padding: 6px 10px; background: none; border: 1px solid #2A2A2A; color: var(--text-dim); font-family: 'Jost', sans-serif; font-size: 10px; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; }
+.btn-cancel-state:hover { border-color: var(--red); color: var(--red); }
+
+/* ── CLIENT VIEW ── */
+.search-bar { display: flex; gap: 10px; margin-bottom: 40px; }
+.search-input-wrap { flex: 1; position: relative; }
+.search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--text-dim); fill: none; stroke-width: 1.5; }
+.search-input { width: 100%; background: var(--dark-2); border: 1px solid #2A2A2A; color: var(--text); padding: 13px 13px 13px 40px; font-family: 'Jost', sans-serif; font-size: 15px; font-weight: 300; letter-spacing: 0.04em; border-radius: var(--radius); outline: none; transition: border-color 0.2s; }
+.search-input:focus { border-color: var(--gold); }
+.search-input::placeholder { color: var(--text-dim); }
+.btn-search { padding: 0 22px; background: var(--gold-dark); border: none; color: var(--gold-light); font-family: 'Jost', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; }
+.btn-search:hover { background: var(--gold); color: var(--dark); }
+
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+.empty-state svg { width: 38px; height: 38px; stroke: #2A2A2A; fill: none; stroke-width: 1; margin-bottom: 14px; }
+.empty-state p { font-size: 13px; letter-spacing: 0.04em; }
+
+.client-cards { display: flex; flex-direction: column; gap: 16px; }
+.client-card { background: var(--dark-2); border: 1px solid #252525; border-radius: var(--radius-lg); padding: 20px 24px; position: relative; overflow: hidden; }
+.client-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 3px 0 0 3px; }
+.client-card.listo::before        { background: var(--green); }
+.client-card.enreparacion::before { background: var(--gold); }
+.client-card.diagnostico::before  { background: var(--gold-dark); }
+.client-card.ingresado::before    { background: var(--blue); }
+.client-card.entregado::before    { background: #333; }
+
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.car-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 400; letter-spacing: 0.01em; }
+.card-meta { display: flex; gap: 18px; margin-top: 4px; flex-wrap: wrap; }
+.meta-item { font-size: 12px; color: var(--text-dim); }
+.meta-item span { color: var(--text-muted); }
+
+/* ── PROGRESS ── */
+.progress-track { margin-top: 18px; }
+.track-steps { display: flex; align-items: center; }
+.step-dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid #333; background: transparent; flex-shrink: 0; }
+.step-line { flex: 1; height: 1px; background: #2A2A2A; }
+.step-dot.done    { border-color: var(--gold); background: var(--gold); }
+.step-dot.current { border-color: var(--gold); background: transparent; box-shadow: 0 0 0 3px rgba(201,169,110,0.2); }
+.step-line.done   { background: var(--gold-dark); }
+.track-labels { display: flex; justify-content: space-between; margin-top: 8px; }
+.track-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+.track-label.active { color: var(--gold); }
+
+/* ── TOAST ── */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--dark-3); border: 1px solid var(--gold); color: var(--gold); padding: 11px 18px; border-radius: var(--radius); font-size: 12px; letter-spacing: 0.06em; opacity: 0; transform: translateY(8px); transition: all 0.3s; pointer-events: none; z-index: 999; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.err { border-color: var(--red); color: var(--red); }
+
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full { grid-column: 1; }
+  .header { flex-direction: column; align-items: flex-start; }
+  .search-bar { flex-direction: column; }
+  .btn-search { padding: 13px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>AutoTrack</h1>
+        <p>Sistema de seguimiento</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-admin-link" id="btn-open-admin" onclick="openAdmin()">Acceso Admin</button>
+      <button class="btn-logout" id="btn-logout" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- ════ PANEL CLIENTE (público) ════ -->
+  <div class="panel active" id="panel-cliente">
+    <div class="section-label">Seguimiento de su vehículo</div>
+    <div class="search-bar">
+      <div class="search-input-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" id="search-dni" type="text" placeholder="Ingrese su DNI para consultar…" maxlength="12" oninput="filterByDni()">
+      </div>
+      <button class="btn-search" onclick="filterByDni()">Buscar</button>
+    </div>
+    <div id="results-area">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <p>Ingrese su DNI para ver el estado de su vehículo</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ PANEL LOGIN ════ -->
+  <div class="panel" id="panel-login">
+    <div class="login-wrap">
+      <div class="login-card">
+        <h2>Panel Administrativo</h2>
+        <p>Acceso exclusivo para el equipo del taller</p>
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="form-label">Contraseña</label>
+          <input class="form-input" id="pwd-input" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="btn-gold" onclick="doLogin()">Ingresar</button>
+        <div class="login-err" id="login-err"></div>
+        <button style="margin-top:18px;width:100%;background:none;border:none;color:var(--text-dim);font-family:'Jost',sans-serif;font-size:11px;letter-spacing:0.1em;cursor:pointer;text-transform:uppercase;" onclick="showPanel('panel-cliente');document.getElementById('btn-open-admin').style.display='';document.getElementById('btn-logout').style.display='none'">← Volver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ PANEL ADMIN ════ -->
+  <div class="panel" id="panel-admin">
+    <div class="section-label">Registrar vehículo</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">DNI del cliente</label>
+        <input class="form-input" id="f-dni" type="text" placeholder="ej. 30456789" maxlength="12">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nombre del cliente</label>
+        <input class="form-input" id="f-nombre" type="text" placeholder="ej. Juan Pérez">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Vehículo</label>
+        <input class="form-input" id="f-auto" type="text" placeholder="ej. Toyota Corolla 2018">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha de ingreso</label>
+        <input class="form-input" id="f-fecha" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estado inicial</label>
+        <div class="sel-wrap">
+          <select class="form-select" id="f-estado">
+            <option value="Ingresado">Ingresado</option>
+            <option value="En diagnóstico">En diagnóstico</option>
+            <option value="En reparación">En reparación</option>
+            <option value="Listo para retirar">Listo para retirar</option>
+            <option value="Entregado">Entregado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observaciones</label>
+        <input class="form-input" id="f-obs" type="text" placeholder="ej. Cambio de frenos, aceite">
+      </div>
+    </div>
+    <button class="btn-primary" onclick="addRecord()">＋ &nbsp; Registrar vehículo</button>
+
+    <div style="margin-top:44px">
+      <div class="section-label">Vehículos registrados</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>DNI</th>
+              <th>Cliente</th>
+              <th>Vehículo</th>
+              <th>Ingreso</th>
+              <th>Estado</th>
+              <th>Obs.</th>
+              <th style="text-align:center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="records-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONTRASEÑA ADMIN (cambiala aquí) ──
+const ADMIN_PASSWORD = 'taller2024';
+
+// ── ESTADOS ──
+const STEPS = ['Ingresado','En diagnóstico','En reparación','Listo para retirar','Entregado'];
+
+// ── DATOS ──
+let records = JSON.parse(localStorage.getItem('autotrack_v2') || 'null');
+if (!records) {
+  records = [
+    { id:1, dni:'30456789', nombre:'Juan Pérez',      auto:'Toyota Corolla 2018',    fecha:'2026-05-18', estado:'En reparación',      obs:'Cambio de pastillas de freno' },
+    { id:2, dni:'28901234', nombre:'María González',  auto:'Ford Focus 2020',         fecha:'2026-05-20', estado:'Listo para retirar', obs:'Service completo' },
+    { id:3, dni:'35123456', nombre:'Carlos López',    auto:'Volkswagen Gol 2015',     fecha:'2026-05-22', estado:'En diagnóstico',     obs:'Falla en motor' },
+  ];
+  save();
+}
+
+let isAdmin = false;
+let editingId = null;
+
+function save() { localStorage.setItem('autotrack_v2', JSON.stringify(records)); }
+
+// ── PANEL SWITCH ──
+function showPanel(id) {
+  ['panel-cliente','panel-login','panel-admin'].forEach(p => {
+    document.getElementById(p).classList.toggle('active', p === id);
+  });
+}
+
+function openAdmin() {
+  if (isAdmin) { showPanel('panel-admin'); return; }
+  showPanel('panel-login');
+  document.getElementById('btn-open-admin').style.display = 'none';
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('login-err').textContent = '';
+  setTimeout(() => document.getElementById('pwd-input').focus(), 100);
+}
+
+function doLogin() {
+  const pwd = document.getElementById('pwd-input').value;
+  if (pwd === ADMIN_PASSWORD) {
+    isAdmin = true;
+    document.getElementById('btn-open-admin').style.display = 'none';
+    document.getElementById('btn-logout').style.display = '';
+    showPanel('panel-admin');
+    renderTable();
+    document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
+  } else {
+    document.getElementById('login-err').textContent = 'Contraseña incorrecta. Intentá de nuevo.';
+    document.getElementById('pwd-input').value = '';
+    document.getElementById('pwd-input').focus();
+  }
+}
+
+function logout() {
+  isAdmin = false;
+  editingId = null;
+  document.getElementById('btn-open-admin').style.display = '';
+  document.getElementById('btn-logout').style.display = 'none';
+  showPanel('panel-cliente');
+}
+
+// ── BADGE ──
+function bKey(s) {
+  const m = { 'Ingresado':'ingresado','En diagnóstico':'diagnostico','En reparación':'enreparacion','Listo para retirar':'listo','Entregado':'entregado' };
+  return m[s] || 'ingresado';
+}
+function badgeHTML(s) {
+  return `<span class="badge b-${bKey(s)}"><span class="badge-dot"></span>${s}</span>`;
+}
+
+// ── TABLA ──
+function renderTable() {
+  const tb = document.getElementById('records-table');
+  if (!records.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-dim);font-size:13px">Sin registros aún</td></tr>';
+    return;
+  }
+  tb.innerHTML = records.map(r => {
+    const isEditing = editingId === r.id;
+    const stateCell = isEditing
+      ? `<td>
+           <div class="inline-edit">
+             <div class="sel-wrap" style="flex:1">
+               <select class="form-select" id="sel-${r.id}">
+                 ${STEPS.map(s => `<option value="${s}"${s===r.estado?' selected':''}>${s}</option>`).join('')}
+               </select>
+             </div>
+             <button class="btn-save-state" onclick="saveState(${r.id})">Guardar</button>
+             <button class="btn-cancel-state" onclick="cancelEdit()">✕</button>
+           </div>
+         </td>`
+      : `<td>${badgeHTML(r.estado)}</td>`;
+
+    return `<tr>
+      <td>${r.dni}</td>
+      <td>${r.nombre}</td>
+      <td>${r.auto}</td>
+      <td>${r.fecha}</td>
+      ${stateCell}
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-dim)">${r.obs||'—'}</td>
+      <td style="text-align:center;white-space:nowrap">
+        ${!isEditing ? `<button class="btn-edit-state" onclick="startEdit(${r.id})" style="margin-right:8px">Cambiar estado</button>` : ''}
+        <button class="btn-del" onclick="deleteRecord(${r.id})" title="Eliminar">×</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function startEdit(id) { editingId = id; renderTable(); }
+function cancelEdit()  { editingId = null; renderTable(); }
+
+function saveState(id) {
+  const sel = document.getElementById('sel-' + id);
+  if (!sel) return;
+  const newState = sel.value;
+  records = records.map(r => r.id === id ? { ...r, estado: newState } : r);
+  save();
+  editingId = null;
+  renderTable();
+  showToast('Estado actualizado correctamente');
+}
+
+function addRecord() {
+  const dni    = document.getElementById('f-dni').value.trim();
+  const nombre = document.getElementById('f-nombre').value.trim();
+  const auto   = document.getElementById('f-auto').value.trim();
+  const fecha  = document.getElementById('f-fecha').value;
+  const estado = document.getElementById('f-estado').value;
+  const obs    = document.getElementById('f-obs').value.trim();
+  if (!dni || !nombre || !auto || !fecha) { showToast('Complete los campos obligatorios', true); return; }
+  records.push({ id: Date.now(), dni, nombre, auto, fecha, estado, obs });
+  save();
+  renderTable();
+  ['f-dni','f-nombre','f-auto','f-obs'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-estado').selectedIndex = 0;
+  showToast('Vehículo registrado correctamente');
+}
+
+function deleteRecord(id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  records = records.filter(r => r.id !== id);
+  save();
+  if (editingId === id) editingId = null;
+  renderTable();
+  showToast('Registro eliminado');
+}
+
+// ── CLIENTE ──
+function progressHTML(estado) {
+  const cur = STEPS.indexOf(estado);
+  let dots = '<div class="track-steps">';
+  STEPS.forEach((s, i) => {
+    const done = i < cur, current = i === cur;
+    dots += `<div class="step-dot ${done?'done':current?'current':''}"></div>`;
+    if (i < STEPS.length - 1) dots += `<div class="step-line ${done?'done':''}"></div>`;
+  });
+  dots += '</div>';
+  let labels = '<div class="track-labels">';
+  STEPS.forEach((s, i) => {
+    const lbl = s === 'Listo para retirar' ? 'Listo' : s.split(' ').pop();
+    labels += `<span class="track-label ${i<=cur?'active':''}">${lbl}</span>`;
+  });
+  labels += '</div>';
+  return `<div class="progress-track">${dots}${labels}</div>`;
+}
+
+function filterByDni() {
+  const q = document.getElementById('search-dni').value.trim();
+  const area = document.getElementById('results-area');
+  if (!q) {
+    area.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><p>Ingrese su DNI para ver el estado de su vehículo</p></div>`;
+    return;
+  }
+  const found = records.filter(r => r.dni.includes(q));
+  if (!found.length) {
+    area.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><p>No se encontraron vehículos para el DNI <strong style="color:var(--text-muted)">${q}</strong></p></div>`;
+    return;
+  }
+  area.innerHTML = `<div class="client-cards">${found.map(r => `
+    <div class="client-card ${bKey(r.estado)}">
+      <div class="card-top">
+        <div>
+          <div class="car-name">${r.auto}</div>
+          <div class="card-meta">
+            <span class="meta-item">Cliente: <span>${r.nombre}</span></span>
+            <span class="meta-item">Ingreso: <span>${r.fecha}</span></span>
+            ${r.obs ? `<span class="meta-item">Obs: <span>${r.obs}</span></span>` : ''}
+          </div>
+        </div>
+        ${badgeHTML(r.estado)}
+      </div>
+      ${progressHTML(r.estado)}
+    </div>
+  `).join('')}</div>`;
+}
+
+// ── TOAST ──
+function showToast(msg, err = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('err', err);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// init
+document.getElementById('btn-logout').style.display = 'none';
+</script>
+</body>
+</html>
